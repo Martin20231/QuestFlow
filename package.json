@@ -1,0 +1,16 @@
+{
+  "name": "rustic-clover-respond-5zhg7",
+  "productName": "rustic-clover-respond-5zhg7",
+  "description": "My Electron application description",
+  "keywords": [],
+  "main": "./main.js",
+  "version": "1.0.0",
+  "author": "MartinTS",
+  "scripts": {
+    "start": "electron ."
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "electron": "42.2.0"
+  }
+}

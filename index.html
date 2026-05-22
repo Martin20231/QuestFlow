@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <title>My Electron RPG - Ultimate Overdrive Edition</title>
+  <style>
+    :root {
+      --bg-dark: #121214;
+      --card-bg: #1e1e24;
+      --accent-gold: #ffb703;
+      --btn-blue: #0077b6;
+      --btn-blue-hover: #0096c7;
+      --border-color: #2a2a35;
+      --rarity-epic: #9b5de5;
+      --rarity-rare: #00b4d8;
+    }
+
+    body { 
+      font-family: 'Segoe UI', system-ui, sans-serif; 
+      background: var(--bg-dark); 
+      color: #f8f9fa; 
+      margin: 0; 
+      padding: 30px;
+    }
+
+    h1 {
+      text-align: center;
+      color: #fff;
+      font-size: 2.5rem;
+      text-shadow: 0 0 15px rgba(255, 183, 3, 0.3);
+      margin-bottom: 30px;
+    }
+
+    .grid { 
+      display: grid; 
+      grid-template-columns: 340px 1fr; 
+      gap: 30px; 
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    .card { 
+      background: var(--card-bg); 
+      padding: 25px; 
+      border-radius: 16px; 
+      border: 1px solid var(--border-color);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+      transition: all 0.3s ease;
+      position: relative;
+    }
+
+    @keyframes goldGlow {
+      0% { box-shadow: 0 8px 24px rgba(0,0,0,0.2); border-color: var(--border-color); }
+      50% { box-shadow: 0 0 30px rgba(255, 183, 3, 0.6); border-color: var(--accent-gold); }
+      100% { box-shadow: 0 8px 24px rgba(0,0,0,0.2); border-color: var(--border-color); }
+    }
+    .glow-effect { animation: goldGlow 1.2s ease-in-out; }
+
+    @keyframes shake {
+      0%, 100% { transform: translate(0, 0); }
+      20% { transform: translate(-4px, 2px); }
+      40% { transform: translate(4px, -2px); }
+      60% { transform: translate(-2px, -2px); }
+      80% { transform: translate(2px, 2px); }
+    }
+    .shake-effect { animation: shake 0.3s ease-in-out; }
+
+    h2 { 
+      margin-top: 0; 
+      color: var(--accent-gold); 
+      font-size: 1.4rem;
+      border-bottom: 2px solid var(--border-color); 
+      padding-bottom: 10px; 
+      margin-bottom: 20px;
+    }
+
+    .btn { 
+      background: var(--btn-blue); 
+      color: white; 
+      border: none; 
+      padding: 12px 20px; 
+      border-radius: 8px; 
+      cursor: pointer; 
+      width: 100%; 
+      font-weight: 600;
+      font-size: 14px;
+      transition: all 0.2s ease;
+    }
+    .btn:hover { background: var(--btn-blue-hover); transform: translateY(-1px); }
+    .btn:disabled { background: #3a3a4a; color: #777; cursor: not-allowed; transform: none; }
+
+    .stat-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: rgba(255,255,255,0.03);
+      padding: 10px 14px;
+      border-radius: 8px;
+      margin-bottom: 8px;
+      border: 1px solid rgba(255,255,255,0.02);
+    }
+    .stat-btn { background: #2a9d8f; padding: 5px 12px; width: auto; margin: 0; font-size: 12px; }
+
+    .quest-card { 
+      background: #25252e; 
+      margin-bottom: 15px; 
+      padding: 20px; 
+      border-radius: 12px; 
+      border: 1px solid var(--border-color);
+      border-left: 5px solid var(--accent-gold); 
+    }
+    .quest-title { font-size: 1.1rem; font-weight: bold; color: #fff; margin: 0 0 8px 0; }
+    .quest-details { display: flex; gap: 15px; font-size: 13px; color: #a0a0b0; margin-bottom: 15px; }
+
+    .progress-bar { background: #2c1616; border-radius: 6px; height: 14px; width: 100%; margin: 8px 0; overflow: hidden; }
+    .progress { background: #e63946; height: 100%; width: 100%; transition: width 0.2s ease-out; }
+    
+    .timer-bar { background: #25252e; border-radius: 6px; height: 14px; width: 100%; margin: 15px 0; overflow: hidden; }
+    .timer-progress { background: var(--accent-gold); height: 100%; width: 0%; transition: width 0.1s linear; }
+
+    #combat-log { 
+      background: #0f0f12; 
+      color: #a7f3d0; 
+      font-family: 'Fira Code', monospace; 
+      height: 140px; 
+      overflow-y: auto; 
+      padding: 15px; 
+      border-radius: 10px; 
+      font-size: 13px; 
+      border: 1px solid var(--border-color); 
+    }
+    
+    .avatar-container { width: 110px; height: 110px; margin: 0 auto; background: #15151a; border-radius: 50%; border: 3px solid #3a3a4a; display: flex; align-items: center; justify-content: center; position: relative;}
+    .avatar-container svg { width: 75px; height: 75px; }
+
+    .inventory-container { display: flex; gap: 10px; justify-content: center; margin-top: 15px; }
+    .item-slot { width: 65px; height: 65px; background: #15151a; border: 2px dashed #444; border-radius: 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 24px; position: relative; }
+    .item-slot.equipped { border: 2px solid var(--rarity-epic); background: linear-gradient(135deg, #1e1e24 0%, #2d114d 100%); }
+    .item-slot .tooltip { display: none; position: absolute; bottom: 70px; background: #111; padding: 5px; font-size: 11px; border-radius: 4px; width: max-content; border: 1px solid #555; z-index: 10; }
+    .item-slot:hover .tooltip { display: block; }
+
+    .album-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-top: 15px; }
+    .album-slot { background: #15151a; border: 1px solid #333; padding: 10px; border-radius: 8px; text-align: center; opacity: 0.25; filter: grayscale(100%); transition: all 0.5s ease; font-size: 11px;}
+    .album-slot.unlocked { opacity: 1; filter: grayscale(0%); border-color: var(--accent-gold); background: rgba(255,183,3,0.05); }
+    .album-slot span { font-size: 24px; display: block; margin-bottom: 5px; }
+
+    /* CASINO GRID */
+    .casino-box { display: flex; gap: 20px; align-items: center; justify-content: space-around; }
+    .wheel-container { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+    .wheel-outer { width: 110px; height: 110px; border-radius: 50%; border: 5px solid #ffb703; position: relative; background: conic-gradient(#e63946 0deg 120deg, #2a9d8f 120deg 240deg, #3a3a4a 240deg 360deg); transition: transform 3s cubic-bezier(0.1, 0.8, 0.1, 1); }
+    .wheel-pointer { width: 0; height: 0; border-left: 8px solid transparent; border-right: 8px solid transparent; border-top: 12px solid #fff; position: absolute; top: -6px; left: 50%; transform: translateX(-50%); z-index: 10; }
+
+    .thimble-container { display: flex; gap: 10px; justify-content: center; margin: 10px 0; }
+    .cup-btn { background: #3e3e4a; font-size: 28px; border: 2px solid #555; border-radius: 8px; padding: 10px; cursor: pointer; transition: all 0.2s; width: 60px; text-align: center;}
+    .cup-btn:hover { background: #555566; border-color: var(--accent-gold); }
+
+    /* SHOP GRID */
+    .shop-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+    .shop-item { background: #25252e; border: 1px solid var(--border-color); padding: 15px; border-radius: 12px; text-align: center; display: flex; flex-direction: column; justify-content: space-between; }
+    .shop-icon { font-size: 32px; margin-bottom: 5px; }
+  </style>
+</head>
+<body>
+
+  <h1>🏰 My Electron RPG - Ultimate Overdrive Edition</h1>
+
+  <div class="grid">
+    <div style="display: flex; flex-direction: column; gap: 25px;">
+      
+      <div class="card" id="profile-card">
+        <h2>👤 Spielerprofil</h2>
+        <div style="text-align: center; margin-bottom: 15px;">
+          <div class="avatar-container" style="border-color: var(--btn-blue);">
+            <svg viewBox="0 0 100 100"><circle cx="50" cy="45" r="30" fill="#78909c"/><path d="M35 45 M35 40 L65 40 L65 55 L50 75 L35 55 Z" fill="#b0bec5" stroke="#37474f" stroke-width="3"/></svg>
+          </div>
+        </div>
+
+        <div class="inventory-container">
+          <div class="item-slot" id="slot-weapon">⚔️<div class="tooltip" id="wpn-tip">Keine Waffe</div></div>
+          <div class="item-slot" id="slot-armor">🛡️<div class="tooltip" id="arm-tip">Keine Rüstung</div></div>
+          <div class="item-slot" id="slot-mount">👤<div class="tooltip" id="mount-tip">Keon Reittier</div></div>
+        </div>
+        <br>
+        
+        <div class="stat-row"><span>Stufe:</span><strong id="char-level" style="color: var(--accent-gold);">1</strong></div>
+        <div class="stat-row"><span>💰 Gold:</span><strong id="char-gold">50</strong></div>
+        <div class="stat-row"><span>⏳ Alu:</span><strong><span id="char-alu">100</span>/100</strong></div>
+        <div class="stat-row"><span>⭐ Album-Bonus:</span><strong style="color: #a7f3d0;" id="album-bonus">+0% XP</strong></div>
+        
+        <h3 style="color: #a0a0b0; font-size: 0.9rem; margin-top: 15px;">⚔️ Attribute</h3>
+        <div class="stat-row"><span>💪 Stärke: <strong id="stat-staerke">10</strong></span><button class="btn stat-btn" id="buy-staerke">+</button></div>
+        <div class="stat-row"><span>🛡️ Ausdauer: <strong id="stat-ausdauer">10</strong></span><button class="btn stat-btn" id="buy-ausdauer">+</button></div>
+      </div>
+
+      <div class="card">
+        <h2>🎰 Tavernen-Casino</h2>
+        <div class="casino-box">
+          <div class="wheel-container">
+            <div style="position: relative;"><div class="wheel-pointer"></div><div class="wheel-outer" id="lucky-wheel"></div></div>
+            <button class="btn" id="spin-btn" style="background: #e63946; padding: 6px; font-size:12px;">Glücksrad (15g)</button>
+          </div>
+          <div style="border-left: 1px solid var(--border-color); padding-left: 15px; text-align:center;">
+            <h4 style="margin:0 0 5px 0; font-size:13px; color:var(--accent-gold);">Hütchenspieler</h4>
+            <div class="thimble-container">
+              <div class="cup-btn" onclick="playThimble(0)">🥛</div>
+              <div class="cup-btn" onclick="playThimble(1)">🥛</div>
+              <div class="cup-btn" onclick="playThimble(2)">🥛</div>
+            </div>
+            <span style="font-size:11px; color:#a0a0b0;">Einsatz: 10g (Doppelt oder nix!)</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>💎 Edelstein-Mine (Passiv)</h2>
+        <p style="font-size: 12px; color: #a0a0b0; margin: 0 0 10px 0;">Deine Arbeiter schürfen im Hintergrund Rohstoffe.</p>
+        <div class="stat-row"><span>Lagernd:</span><strong style="color: #00b4d8;"><span id="mine-gems">0</span> Edelsteine</strong></div>
+        <button class="btn" id="sell-gems-btn" style="background: #2a9d8f;">💎 Alle Steine verkaufen (+10g/Stk)</button>
+      </div>
+
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 25px;">
+      
+      <div class="card" id="arena-card">
+        <div id="quest-view">
+          <h2>🍻 Die Taverne & Raid-Portal</h2>
+          <div id="quest-board">Generiere Abenteuer...</div>
+          
+          <div style="margin-top: 25px; border-top: 2px solid var(--border-color); padding-top: 20px;">
+            <h3 style="color: #e63946;">😈 Epic Gilden-Raid Portal</h3>
+            <p style="font-size: 13px; color: #a0a0b0; margin-bottom: 15px;">Der Unterwelt-Dämon behält permanent seinen erlittenen Schaden. Erledige ihn für das epische Breitschwert!</p>
+            <div class="progress-bar" style="background: #251010; height: 20px;"><div id="raid-boss-hp-bar" style="background: #9b5de5; width: 100%; height: 100%;"></div></div>
+            <p id="raid-boss-hp-text" style="text-align: center; font-size: 12px; font-weight: bold; margin: 5px 0 15px 0;">Boss-Leben: 1500/1500 HP</p>
+            <button class="btn" id="start-raid-btn" style="background: linear-gradient(45deg, #7b2cbf, #9b5de5);">🔥 Raid-Kampf antreten</button>
+          </div>
+        </div>
+
+        <div id="timer-box" style="display:none; text-align: center; padding: 20px 0;">
+          <h2>🗺️ Auf dem Weg zum Abenteuer...</h2>
+          <div class="timer-bar"><div id="quest-progress" class="timer-progress"></div></div>
+          <p id="timer-text" style="font-weight: bold; color: var(--accent-gold);">0s</p>
+        </div>
+
+        <div id="arena-box" style="display:none;">
+          <h2 id="arena-title">⚔️ Live Kampf-Arena</h2>
+          <div style="display: flex; justify-content: space-between; text-align: center; margin-bottom: 25px; background: #15151a; padding: 20px; border-radius: 12px;">
+            <div style="width: 40%;">
+              <div class="avatar-container" style="border-color: #00b4d8;"><svg viewBox="0 0 100 100"><circle cx="50" cy="45" r="30" fill="#78909c"/></svg></div>
+              <h4 id="arena-player-name" style="margin: 10px 0 5px 0;">Spieler</h4>
+              <div class="progress-bar"><div id="hp-bar-player" class="progress"></div></div>
+              <p id="hp-text-player" style="margin: 0; font-size: 12px;">100 HP</p>
+            </div>
+            <div style="align-self: center; font-size: 24px; font-weight: 800; color: #e63946;">VS</div>
+            <div style="width: 40%;">
+              <div class="avatar-container" id="enemy-avatar-box" style="border-color: #e63946;"></div>
+              <h4 id="arena-enemy-name" style="margin: 10px 0 5px 0; color: #e63946;">Monster</h4>
+              <div class="progress-bar"><div id="hp-bar-enemy" class="progress"></div></div>
+              <p id="hp-text-enemy" style="margin: 0; font-size: 12px;">100 HP</p>
+            </div>
+          </div>
+          <div style="display: flex; gap: 15px;">
+            <button class="btn" id="action-normal" style="background: #2a9d8f;">⚔️ Standardschlag</button>
+            <button class="btn" id="action-wucht" style="background: #e76f51;">🔨 Wuchtangriff</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>🛒 Dorfladen (Waffen & Händler)</h2>
+        <div class="shop-grid">
+          <div class="shop-item">
+            <div>
+              <div class="shop-icon">🛡️</div>
+              <strong style="color:var(--rarity-rare);">Kettenhemd</strong>
+              <p style="font-size:12px; color:#a0a0b0; margin:5px 0;">+8 Ausdauer für Kämpfe</p>
+            </div>
+            <button class="btn" id="buy-armor-btn" style="padding:6px; margin-top:8px;">Kaufen (35g)</button>
+          </div>
+          <div class="shop-item">
+            <div>
+              <div class="shop-icon">🐴</div>
+              <strong style="color:var(--accent-gold);">Schatten-Ross</strong>
+              <p style="font-size:12px; color:#a0a0b0; margin:5px 0;">Halbiert Quest-Timer permanent (-50% Zeit!)</p>
+            </div>
+            <button class="btn" id="buy-mount-btn" style="padding:6px; margin-top:8px; background:#e76f51;">Kaufen (40g)</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>📖 Sammelalbum der Sammelwut (Bonus: <span id="album-bonus-title" style="color:var(--accent-gold);">+0%</span>)</h2>
+        <div class="album-grid">
+          <div class="album-slot" id="album-ratte"><span>🐀</span>Riesenratte</div>
+          <div class="album-slot" id="album-ork"><span>👹</span>Straßenräuber</div>
+          <div class="album-slot" id="album-wolf"><span>🐺</span>Schattenwolf</div>
+          <div class="album-slot" id="album-magier"><span>🧙‍♂️</span>Magier</div>
+          <div class="album-slot" id="album-drache"><span>🐉</span>Mini-Drache</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>📜 Logbuch</h2>
+        <div id="combat-log">Willkommen zurück, Abenteurer! Wähle eine Aktivität.</div>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    let player = {
+      name: "Krieger von Electron", level: 1, xp: 0, xpNeeded: 100, gold: 50, alu: 100,
+      stats: { staerke: 10, ausdauer: 10, glueck: 5 },
+      equipment: { weapon: null, armor: null, mount: false }
+    };
+
+    let unlockedMonster = { ratte: false, ork: false, wolf: false, magier: false, drache: false };
+    let raidBoss = { name: "Unterwelt-Dämon", maxHp: 1500, hp: 1500, strength: 22 };
+    let isRaidActive = false;
+    let mineGems = 0;
+
+    let availableQuests = [];
+    let activeBattle = null;
+    let currentQuestData = null;
+    let isSpinning = false;
+
+    const monsterGraphics = {
+      ork: `<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="35" fill="#4f6d3b"/><circle cx="38" cy="45" r="4" fill="#fff"/><circle cx="62" cy="45" r="4" fill="#fff"/></svg>`,
+      magier: `<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="35" fill="#311b92"/><polygon points="15,50 50,5 85,50" fill="#4a148c"/></svg>`,
+      ratte: `<svg viewBox="0 0 100 100"><circle cx="50" cy="55" r="30" fill="#616161"/><circle cx="40" cy="50" r="3" fill="#ff1744"/><circle cx="60" cy="50" r="3" fill="#ff1744"/></svg>`,
+      wolf: `<svg viewBox="0 0 100 100"><polygon points="50,20 25,65 75,65" fill="#37474f"/><circle cx="40" cy="50" r="4" fill="#ff3d00"/></svg>`,
+      drache: `<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="35" fill="#b71c1c"/><circle cx="38" cy="45" r="5" fill="#ffeb3b"/><circle cx="62" cy="45" r="5" fill="#ffeb3b"/></svg>`,
+      daemon: `<svg viewBox="0 0 100 100"><rect x="20" y="20" width="60" height="60" rx="10" fill="#3a0ca3"/><polygon points="20,20 5,0 30,15" fill="#7209b7"/><circle cx="35" cy="45" r="8" fill="#f72585"/><circle cx="65" cy="45" r="8" fill="#f72585"/></svg>`
+    };
+
+    function getXpBonusFactor() {
+      let count = Object.values(unlockedMonster).filter(Boolean).length;
+      return 1 + (count * 0.05);
+    }
+
+    function setArenaButtonsDisabled(disabled) {
+      document.getElementById("action-normal").disabled = disabled;
+      document.getElementById("action-wucht").disabled = disabled;
+    }
+
+    function buyStat(statName) {
+      const cost = Math.floor(player.stats[statName] * 1.5);
+      if (player.gold >= cost) { player.gold -= cost; player.stats[statName]++; triggerGlowEffect("profile-card"); return true; }
+      return false;
+    }
+
+    function triggerGlowEffect(elementId) {
+      const el = document.getElementById(elementId); el.classList.remove("glow-effect"); void el.offsetWidth; el.classList.add("glow-effect");
+    }
+    function triggerScreenShake() {
+      const area = document.getElementById("arena-card"); area.classList.remove("shake-effect"); void area.offsetWidth; area.classList.add("shake-effect");
+    }
+
+    // --- GENERIERUNG & REISE ---
+    function generateQuests() {
+      const questPool = [
+        { name: "Verprügle den fiesen Straßenräuber", type: "ork", baseAlu: 4, baseXp: 25, baseGold: 12, baseStr: 4 },
+        { name: "Suche nach der verlorenen Socke des Magiers", type: "magier", baseAlu: 6, baseXp: 40, baseGold: 22, baseStr: 6 },
+        { name: "Säubere die Kanalisation von Riesenratten", type: "ratte", baseAlu: 8, baseXp: 60, baseGold: 35, baseStr: 7 },
+        { name: "Jage den wilden Schattenwolf im Düsterwald", type: "wolf", baseAlu: 10, baseXp: 80, baseGold: 45, baseStr: 9 },
+        { name: "⚠️ BOSS: Bezwinge den feurigen Mini-Drachen!", type: "drache", baseAlu: 14, baseXp: 130, baseGold: 70, baseStr: 11 }
+      ];
+      const shuffled = questPool.sort(() => 0.5 - Math.random());
+      availableQuests = shuffled.slice(0, 3).map(quest => ({
+        name: quest.name, type: quest.type, aluCost: quest.baseAlu,
+        xpReward: Math.floor(quest.baseXp * player.level * getXpBonusFactor() * (0.95 + Math.random() * 0.1)),
+        goldReward: Math.floor(quest.baseGold * player.level * (0.95 + Math.random() * 0.1)),
+        enemyStrength: Math.floor(quest.baseStr + (player.level - 1) * 3)
+      }));
+    }
+
+    function renderQuests() {
+      generateQuests();
+      const board = document.getElementById("quest-board");
+      board.innerHTML = "";
+      
+      availableQuests.forEach((quest, index) => {
+        // Berechne eventuellen Mount-Rabatt für Anzeige
+        let displayTime = player.mount ? Math.ceil(quest.aluCost / 2) : quest.aluCost;
+        const html = `
+          <div class="quest-card">
+            <div class="quest-title">${quest.name}</div>
+            <div class="quest-details">
+              <span>⏳ Zeit: ${displayTime}s ${player.mount ? '(Halbiert!)':''}</span>
+              <span>💰 Gold: ${quest.goldReward}</span>
+              <span>⭐ XP: ${quest.xpReward}</span>
+            </div>
+            <button class="btn" onclick="startQuestByIndex(${index})">Quest antreten</button>
+          </div>
+        `;
+        board.innerHTML += html;
+      });
+    }
+
+    window.startQuestByIndex = function(index) {
+      const quest = availableQuests[index];
+      if (player.alu < quest.aluCost) { alert("Nicht genug Abenteuerlust!"); return; }
+      player.alu -= quest.aluCost; currentQuestData = quest; isRaidActive = false; updateUI();
+      document.getElementById("quest-view").style.display = "none";
+      document.getElementById("timer-box").style.display = "block";
+
+      // Reittier halbiert die reale Wartezeit!
+      let duration = player.mount ? Math.ceil(quest.aluCost / 2) : quest.aluCost; 
+      let current = 0;
+      const progress = document.getElementById("quest-progress");
+      const timerText = document.getElementById("timer-text");
+
+      const interval = setInterval(() => {
+        current++; progress.style.width = `${(current / duration) * 100}%`;
+        timerText.innerText = `${duration - current}s verbleibend`;
+        if (current >= duration) {
+          clearInterval(interval);
+          activeBattle = {
+            playerMaxHp: (player.stats.ausdauer + (player.equipment.armor ? player.equipment.armor.bonus : 0)) * 12,
+            playerHp: (player.stats.ausdauer + (player.equipment.armor ? player.equipment.armor.bonus : 0)) * 12,
+            enemyMaxHp: quest.enemyStrength * 8, enemyHp: quest.enemyStrength * 8, enemyStrength: quest.enemyStrength,
+            turn: 'player', log: ['⚔️ Kampf startet!']
+          };
+          document.getElementById("timer-box").style.display = "none";
+          document.getElementById("arena-box").style.display = "block";
+          document.getElementById("arena-title").innerText = "⚔️ Live Kampf-Arena";
+          document.getElementById("enemy-avatar-box").innerHTML = monsterGraphics[quest.type];
+          document.getElementById("arena-enemy-name").innerText = "Wildes Monster";
+          setArenaButtonsDisabled(false);
+          updateArenaUI();
+        }
+      }, 1000);
+    };
+
+    // --- KAMPFSYSTEM ---
+    function executePlayerAction(actionType) {
+      if (activeBattle.turn !== 'player' || activeBattle.playerHp <= 0 || activeBattle.enemyHp <= 0) return;
+      let damage = 0; let logMessage = "";
+      const isCrit = Math.random() * 100 < Math.min(player.stats.glueck * 2.5, 60);
+
+      if (actionType === 'normal') {
+        damage = Math.floor((player.stats.staerke + (player.equipment.weapon ? player.equipment.weapon.bonus : 0)) * (0.9 + Math.random() * 0.3));
+        logMessage = `⚔️ Du triffst für ${damage} Schaden.`;
+      } else {
+        if (Math.random() > 0.25) {
+          damage = Math.floor((player.stats.staerke + (player.equipment.weapon ? player.equipment.weapon.bonus : 0)) * 1.7);
+          logMessage = `🔨 WUCHTANGRIFF schlägt ein für ${damage} Schaden!`;
+        } else { logMessage = `💨 Daneben! Dein Wuchtangriff verfehlt das Ziel.`; }
+      }
+
+      if (damage > 0 && isCrit) { damage *= 2; logMessage = `💥 CRIT! ` + logMessage; triggerScreenShake(); }
+      activeBattle.enemyHp = Math.max(0, activeBattle.enemyHp - damage);
+      activeBattle.log.push(logMessage);
+      activeBattle.turn = activeBattle.enemyHp > 0 ? 'enemy' : 'player';
+    }
+
+    function executeEnemyAction() {
+      if (activeBattle.turn !== 'enemy' || activeBattle.enemyHp <= 0) return;
+      let damage = Math.floor(activeBattle.enemyStrength * (0.5 + Math.random() * 0.4));
+      activeBattle.playerHp = Math.max(0, activeBattle.playerHp - damage);
+      activeBattle.log.push(`👹 Gegner zieht dir ${damage} HP ab.`);
+      activeBattle.turn = 'player';
+    }
+
+    const updateArenaUI = () => {
+      document.getElementById("hp-bar-player").style.width = `${(activeBattle.playerHp / activeBattle.playerMaxHp) * 100}%`;
+      document.getElementById("hp-text-player").innerText = `${activeBattle.playerHp}/${activeBattle.playerMaxHp} HP`;
+      document.getElementById("hp-bar-enemy").style.width = `${(activeBattle.enemyHp / activeBattle.enemyMaxHp) * 100}%`;
+      document.getElementById("hp-text-enemy").innerText = `${activeBattle.enemyHp}/${activeBattle.enemyMaxHp} HP`;
+      document.getElementById("combat-log").innerHTML = activeBattle.log.join("<br>");
+      document.getElementById("combat-log").scrollTop = document.getElementById("combat-log").scrollHeight;
+
+      if (activeBattle.playerHp <= 0 || activeBattle.enemyHp <= 0) {
+        setArenaButtonsDisabled(true); setTimeout(endActiveBattle, 1200); 
+      }
+    };
+
+    const handlePlayerTurn = (actionType) => {
+      if (activeBattle.turn !== 'player') return;
+      executePlayerAction(actionType); updateArenaUI();
+      
+      if (activeBattle.enemyHp > 0) {
+        setArenaButtonsDisabled(true);
+        setTimeout(() => { 
+          executeEnemyAction(); 
+          updateArenaUI(); 
+          if (activeBattle.playerHp > 0) setArenaButtonsDisabled(false);
+        }, 500);
+      }
+    };
+
+    const endActiveBattle = () => {
+      const won = activeBattle.playerHp > 0;
+      let logBox = document.getElementById("combat-log");
+
+      if (isRaidActive) {
+        raidBoss.hp = activeBattle.enemyHp;
+        if (raidBoss.hp <= 0) {
+          player.gold += 300; player.equipment.weapon = { name: "🔥 Dämonische Obsidianklinge", bonus: 25 };
+          logBox.innerHTML = `<span style="color:var(--rarity-epic); font-weight:bold;">🎉 DER RAIDBOSS WURDE BESIEGT! Du erhältst 300g und die legendäre Obsidianklinge (+25 Stärke)!</span>`;
+        } else { logBox.innerHTML = `<strong style="color:#e76f51;">💀 Du bist gefallen! Der Boss hat noch ${raidBoss.hp} HP. Heile dich und tritt erneut an!</strong>`; }
+      } else {
+        if (won) {
+          player.xp += currentQuestData.xpReward; player.gold += currentQuestData.goldReward;
+          if (unlockedMonster[currentQuestData.type] === false) {
+            unlockedMonster[currentQuestData.type] = true;
+            logBox.innerHTML = `<span style="color:var(--accent-gold);">📖 NEUER ALBUMEINTRAG! Permanent +5% XP freigeschaltet!</span><br>`;
+          }
+          logBox.innerHTML += `<strong style="color:var(--accent-gold);">🏆 Sieg! +${currentQuestData.goldReward}g, +${currentQuestData.xpReward} XP.</strong>`;
+          if (player.xp >= player.xpNeeded) { player.xp -= player.xpNeeded; player.level++; player.xpNeeded = Math.floor(player.xpNeeded * 1.6); player.stats.staerke+=3; player.stats.ausdauer+=3; alert("LEVEL UP! Du bist jetzt Stufe " + player.level); }
+        } else { logBox.innerHTML = `<span style="color:#e63946;">❌ Du hast kläglich verloren. Ruh dich in der Taverne aus!</span>`; }
+      }
+
+      document.getElementById("arena-box").style.display = "none";
+      document.getElementById("quest-view").style.display = "block";
+      updateUI(); renderQuests();
+    };
+
+    // --- CASINO MECHANIKEN ---
+    document.getElementById("spin-btn").onclick = () => {
+      if (isSpinning || player.gold < 15) return;
+      player.gold -= 15; isSpinning = true; updateUI();
+      
+      const wheel = document.getElementById("lucky-wheel");
+      const randomDegrees = Math.floor(3000 + Math.random() * 2000);
+      wheel.style.transform = `rotate(${randomDegrees}deg)`;
+
+      setTimeout(() => {
+        isSpinning = false;
+        wheel.style.transition = 'none';
+        const actualDeg = randomDegrees % 360;
+        wheel.style.transform = `rotate(${actualDeg}deg)`;
+        setTimeout(() => wheel.style.transition = 'transform 3s cubic-bezier(0.1, 0.8, 0.1, 1)', 50);
+
+        let logBox = document.getElementById("combat-log");
+        if (actualDeg >= 0 && actualDeg < 120) {
+          player.gold += 50; logBox.innerHTML = `<span style="color:var(--accent-gold);">🎰 GLÜCKSRAD: Jackpot! +50 Gold gewonnen!</span>`;
+        } else if (actualDeg >= 120 && actualDeg < 240) {
+          player.xp += 30; logBox.innerHTML = `<span style="color:#a7f3d0;">🎰 GLÜCKSRAD: Du spürst neue Kraft! +30 XP erhalten.</span>`;
+        } else {
+          logBox.innerHTML = `🎰 GLÜCKSRAD: Niete! Nur heiße Luft gewonnen.`;
+        }
+        updateUI();
+      }, 3000);
+    };
+
+    window.playThimble = function(chosenCup) {
+      if (player.gold < 10) { alert("Zu pleite fürs Hütchenspiel!"); return; }
+      player.gold -= 10;
+      const winningCup = Math.floor(Math.random() * 3);
+      let logBox = document.getElementById("combat-log");
+
+      if (chosenCup === winningCup) {
+        player.gold += 20;
+        logBox.innerHTML = `<span style="color:var(--accent-gold);">🃏 HÜTCHENSPIELER: Richtig! Die Münze war unter Becher ${chosenCup+1}. Du gewinnst 20g!</span>`;
+      } else {
+        logBox.innerHTML = `🃏 HÜTCHENSPIELER: Falsch! Die Münze war unter Becher ${winningCup+1}. Dein Gold ist weg!`;
+      }
+      updateUI();
+    };
+
+    // --- PASSIVE EDELSTEIN MINE ---
+    setInterval(() => {
+      mineGems++;
+      document.getElementById("mine-gems").innerText = mineGems;
+    }, 5000); // Gräbt alle 5 Sekunden einen Edelstein aus
+
+    document.getElementById("sell-gems-btn").onclick = () => {
+      if (mineGems <= 0) return;
+      let profit = mineGems * 10;
+      player.gold += profit;
+      document.getElementById("combat-log").innerHTML = `💎 MINE: Du hast ${mineGems} Edelsteine für ${profit} Gold auf dem Markt verkauft!`;
+      mineGems = 0;
+      document.getElementById("mine-gems").innerText = mineGems;
+      updateUI();
+    };
+
+    // --- SHOP KÄUFE ---
+    document.getElementById("buy-armor-btn").onclick = () => {
+      if (player.gold >= 35 && !player.equipment.armor) {
+        player.gold -= 35;
+        player.equipment.armor = { name: "Kettenhemd", bonus: 8 };
+        document.getElementById("combat-log").innerHTML = `🛒 SHOP: Kettenhemd erfolgreich ausgerüstet (+8 Ausdauer)!`;
+        updateUI();
+      } else { alert("Zu wenig Gold oder Rüstung bereits gekauft!"); }
+    };
+
+    document.getElementById("buy-mount-btn").onclick = () => {
+      if (player.gold >= 40 && !player.mount) {
+        player.gold -= 40;
+        player.mount = true;
+        document.getElementById("combat-log").innerHTML = `🛒 SHOP: Schatten-Ross gekauft! Abenteuerzeit ist jetzt dauerhaft HALBIERT!`;
+        updateUI();
+        renderQuests(); // Aktualisiert die Stunden/Sekundenanzeige der aktuellen Quests
+      } else { alert("Zu wenig Gold oder Mount bereits im Besitz!"); }
+    };
+
+    // --- RAID PORTAL ---
+    document.getElementById("start-raid-btn").onclick = () => {
+      if (raidBoss.hp <= 0) { alert("Der Raidboss ist bereits tot!"); return; }
+      isRaidActive = true;
+      currentQuestData = { name: "Gilden-Raid: Unterwelt-Dämon", type: "daemon" };
+      
+      activeBattle = {
+        playerMaxHp: (player.stats.ausdauer + (player.equipment.armor ? player.equipment.armor.bonus : 0)) * 12,
+        playerHp: (player.stats.ausdauer + (player.equipment.armor ? player.equipment.armor.bonus : 0)) * 12,
+        enemyMaxHp: raidBoss.maxHp, enemyHp: raidBoss.hp, enemyStrength: raidBoss.strength,
+        turn: 'player', log: ['😈 Das Portal öffnet sich! Der Unterwelt-Dämon brüllt auf!']
+      };
+
+      document.getElementById("quest-view").style.display = "none";
+      document.getElementById("arena-box").style.display = "block";
+      document.getElementById("arena-title").innerText = "👹 GILDEN-RAID EVENT";
+      document.getElementById("enemy-avatar-box").innerHTML = monsterGraphics.daemon;
+      document.getElementById("arena-enemy-name").innerText = raidBoss.name;
+      setArenaButtonsDisabled(false);
+      updateArenaUI();
+    };
+
+    // --- INTERFACE UPDATES ---
+    const updateUI = () => {
+      document.getElementById("char-level").innerText = player.level;
+      document.getElementById("char-gold").innerText = player.gold;
+      document.getElementById("char-alu").innerText = player.alu;
+      
+      document.getElementById("stat-staerke").innerText = `${player.stats.staerke} (+${player.equipment.weapon ? player.equipment.weapon.bonus : 0})`;
+      document.getElementById("stat-ausdauer").innerText = `${player.stats.ausdauer} (+${player.equipment.armor ? player.equipment.armor.bonus : 0})`;
+      
+      document.getElementById("buy-staerke").innerText = `+ (${Math.floor(player.stats.staerke * 1.5)}g)`;
+      document.getElementById("buy-ausdauer").innerText = `+ (${Math.floor(player.stats.ausdauer * 1.5)}g)`;
+
+      document.getElementById("raid-boss-hp-bar").style.width = `${(raidBoss.hp / raidBoss.maxHp) * 100}%`;
+      document.getElementById("raid-boss-hp-text").innerText = `Boss-Leben: ${raidBoss.hp}/${raidBoss.maxHp} HP`;
+
+      let pct = (Object.values(unlockedMonster).filter(Boolean).length * 5);
+      document.getElementById("album-bonus").innerText = `+${pct}% XP`;
+      document.getElementById("album-bonus-title").innerText = `+${pct}%`;
+      Object.keys(unlockedMonster).forEach(key => {
+        if (unlockedMonster[key]) document.getElementById(`album-${key}`).classList.add("unlocked");
+      });
+
+      // Inventar-Anzeigen & Tooltips
+      if (player.equipment.weapon) {
+        document.getElementById("slot-weapon").innerText = "🗡️";
+        document.getElementById("slot-weapon").classList.add("equipped");
+        document.getElementById("wpn-tip").innerText = `${player.equipment.weapon.name} (+${player.equipment.weapon.bonus} Stärke)`;
+      }
+      if (player.equipment.armor) {
+        document.getElementById("slot-armor").innerText = "👕";
+        document.getElementById("slot-armor").classList.add("equipped");
+        document.getElementById("arm-tip").innerText = `${player.equipment.armor.name} (+${player.equipment.armor.bonus} Ausdauer)`;
+        document.getElementById("buy-armor-btn").disabled = true;
+        document.getElementById("buy-armor-btn").innerText = "Ausgerüstet";
+      }
+      if (player.mount) {
+        document.getElementById("slot-mount").innerText = "🐴";
+        document.getElementById("slot-mount").style.borderColor = "var(--accent-gold)";
+        document.getElementById("mount-tip").innerText = "Schatten-Ross (-50% Questzeit)";
+        document.getElementById("buy-mount-btn").disabled = true;
+        document.getElementById("buy-mount-btn").innerText = "Im Besitz";
+      }
+    };
+
+    document.getElementById("action-normal").onclick = () => handlePlayerTurn('normal');
+    document.getElementById("action-wucht").onclick = () => handlePlayerTurn('wucht');
+    document.getElementById("buy-staerke").onclick = () => { if(buyStat('staerke')) updateUI(); };
+    document.getElementById("buy-ausdauer").onclick = () => { if(buyStat('ausdauer')) updateUI(); };
+
+    updateUI(); 
+    renderQuests();
+  </script>
+</body>
+</html>
